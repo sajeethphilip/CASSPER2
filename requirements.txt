@@ -17,4 +17,4 @@ image_slicer
 sklearn
 tensorboard
 tensorflow
-
+tf_slim
