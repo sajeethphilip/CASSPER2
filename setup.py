@@ -50,7 +50,8 @@ setuptools.setup(
         'sklearn',
         'tensorboard',
         'tensorflow',
-        'tf_slim'
+        'tf_slim',
+         'pandas'
         ],
 
     classifiers=[
