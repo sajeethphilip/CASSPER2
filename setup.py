@@ -22,7 +22,7 @@ setuptools.setup(
 
     url="https://github.com/sajeethphilip/CASSPER2/",
 
-    packages=setuptools.find_packages(include=['CASSPER2.py']),
+    packages=setuptools.find_packages(include=['CASSPER2.*','CASSPER']),
     install_requires=[
         'CASSPER2',
         'argparse',
