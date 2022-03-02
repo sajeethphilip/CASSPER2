@@ -20,7 +20,7 @@ setuptools.setup(
 
     long_description_content_type="text/markdown",
 
-    url="https://github.com/sajeethphilip/CASSPER2",
+    url="https://github.com/sajeethphilip/CASSPER2/",
 
     packages=setuptools.find_packages(include=['CASSPER2.py']),
     install_requires=[
