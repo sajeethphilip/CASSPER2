@@ -18,3 +18,4 @@ sklearn
 tensorboard
 tensorflow
 tf_slim
+
