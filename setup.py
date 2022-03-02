@@ -8,7 +8,7 @@ setuptools.setup(
 
     name="CASSPER2", # Replace with your username
 
-    version="",
+    version="2.3.1",
 
     author="Ninan Sajeeth Philip",
 
@@ -22,9 +22,8 @@ setuptools.setup(
 
     url="https://github.com/sajeethphilip/CASSPER2/",
 
-    packages=setuptools.find_packages(include=['CASSPER2.*','CASSPER']),
+    packages=setuptools.find_packages(include=['CASSPER2.py','CASSPER']),
     install_requires=[
-        'CASSPER2.py',
         'argparse',
         'image-slicer',
         'imageio',
