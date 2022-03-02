@@ -8,7 +8,7 @@ setuptools.setup(
 
     name="CASSPER2", # Replace with your username
 
-    version="2.3.1",
+    version="",
 
     author="Ninan Sajeeth Philip",
 
