@@ -8,7 +8,7 @@ except:
 import warnings
 
 warnings.filterwarnings('ignore')
-
+import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -74,6 +74,7 @@ except:
 
 import tensorflow as tf
 #from tensorflow.contrib import slim
+tf.compat.v1.disable_eager_execution()
 
 def Upsampling(inputs,scale):
     return tf.image.resize(inputs, size=[tf.shape(input=inputs)[1]*scale,  tf.shape(input=inputs)[2]*scale], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
@@ -101,36 +102,47 @@ def ResidualUnit(inputs, n_filters=48, filter_size=3):
     net = slim.batch_norm(net, fused=True)
 
     return net
-def get_radius_erode(image=None):
+
+def get_radius_erode(image=None,shimg=None,Train=False):
     cv2.namedWindow('image',cv2.WINDOW_NORMAL)
     # create trackbars
-
-    cv2.createTrackbar('radius','image',50,500,callback)
-    cv2.createTrackbar('erosion','image',0,10, callback)
-    cv2.createTrackbar('dilation','image',0,10, callback)
-    cv2.createTrackbar('Kernel','image',1,100, callback)
-    cv2.createTrackbar('Weight','image',20,500, callback)
-
+    
+    cv2.createTrackbar('radius','image',20,500,callback)
+    cv2.createTrackbar('erosion','image',10,1000, callback)
+    cv2.createTrackbar('dilation','image',10,1000, callback)
+    cv2.createTrackbar('Kernel','image',2,200, callback)
+    cv2.createTrackbar('Weight','image',3,200, callback)
+    cv2.createTrackbar('threshold','image',128,255, callback)    
+    oldradius=50
+    olderode=0
+    olddial=0
+    oldkvl=2
+    oldwt=3
+    oldtp=0
     radss=[]
     eros=[]
     dials=[]
     kvals=[]
     wvals=[]
+    thresh=[]
+    oldthresh=128
     print('Reading Image:%s'%image)
-    img = cv2.imread(image)
-    imx=img.copy()
-    sx,sy,_=img.shape
+    imx = cv2.imread(image)
+    sx,sy,_=imx.shape
+    shimx = cv2.imread(shimg)
 
-    img=img[sx//2-Window_Size:sx//2+Window_Size,sy//2-Window_Size:sy//2+Window_Size]
+    img=imx[sx//2-Window_Size:sx//2+Window_Size,sy//2-Window_Size:sy//2+Window_Size]
+    sximg=shimx[sx//2-Window_Size:sx//2+Window_Size,sy//2-Window_Size:sy//2+Window_Size]
     oldx=sx//2
     oldy=sy//2
     PCCode=np.array([label_values[class_names_list=='Protein']])
     print("---------------------------------------------------------")
-    print("------------Verify the selection-----------")
+    print("    ------------Verify the selection-----------")
     print("Move frame up,down,left or right by pressing u,d,r,l")
     print("  Adjust radius and other parameters as required")
+    print("         Select kernel type by pressing k")
     print("   To save selection press s after each setting")
-    print("               Press q to quit")
+    print("                  Press q to quit")
     print("---------------------------------------------------------")
     while(1):
 
@@ -143,56 +155,92 @@ def get_radius_erode(image=None):
                 dials.append(dial)
                 kvals.append(kvl)
                 wvals.append(wt)
-
+                thresh.append(oldthresh)
+                lastk='s'
+            if k== ord('k'):
+                if oldtp<2:
+                    oldtp=oldtp+1
+                else:
+                    oldtp=0
+                print("Kernel changed to %s"%oldtp)
             if k== ord('u'):
                 if oldy>=2*Window_Size:
                     oldy=oldy-Window_Size
                     img=imx[oldx-Window_Size:oldx+Window_Size,oldy-Window_Size:oldy+Window_Size]
+                    sximg=shimx[oldx-Window_Size:oldx+Window_Size,oldy-Window_Size:oldy+Window_Size]
                 else:
                     oldy=2*Window_Size
             if k== ord('d'):
                 if oldy<=sy+2*Window_Size:
                     oldy=oldy+Window_Size
                     img=imx[oldx-Window_Size:oldx+Window_Size,oldy-Window_Size:oldy+Window_Size]
+                    sximg=shimx[oldx-Window_Size:oldx+Window_Size,oldy-Window_Size:oldy+Window_Size]
                 else:
                     oldy=sy-2*Window_Size
             if k== ord('r'):
                 if oldx<=sx+2*Window_Size:
                     oldx=oldx+Window_Size
                     img=imx[oldx-Window_Size:oldx+Window_Size,oldy-Window_Size:oldy+Window_Size]
+                    sximg=shimx[oldx-Window_Size:oldx+Window_Size,oldy-Window_Size:oldy+Window_Size]
                 else:
                     oldx=sx-2*Window_Size
             if k== ord('l'):
                 if oldx>=2*Window_Size:
                     oldx=oldx-Window_Size
                     img=imx[oldx-Window_Size:oldx+Window_Size,oldy-Window_Size:oldy+Window_Size]
+                    sximg=shimx[oldx-Window_Size:oldx+Window_Size,oldy-Window_Size:oldy+Window_Size]
 
                 else:
                     oldx=2*Window_Size
 
             # get current positions of the trackbars
             radius = cv2.getTrackbarPos('radius','image')
-            erode = cv2.getTrackbarPos('erosion','image')
-            dial = cv2.getTrackbarPos('dialation','image')
-            kvl=cv2.getTrackbarPos('Kernel','image')
-            wt=cv2.getTrackbarPos('Weight','image')
+            erode = cv2.getTrackbarPos('erosion','image')//10
+            dial = cv2.getTrackbarPos('dialation','image')//10
+            kvl=cv2.getTrackbarPos('Kernel','image')//20
+            wt=cv2.getTrackbarPos('Weight','image')//20
+            oldthresh=cv2.getTrackbarPos('threshold','image')//10
             if kvl<1:
                 kvl=1
             if wt <1:
                 wt=1
+            if radius !=oldradius:
+                oldradius=radius
+                lastk='r'
+            if erode !=olderode:
+                olderode=erode
+                lastk='e'
+            if dial !=olddial:
+                olddial=dial
+                lastk='d'
+            if kvl !=oldkvl:
+                oldkvl=kvl
+                lastk='k'
+            if wt !=oldwt:
+                oldwt=wt
+                lastk='r'
             contr_min=radius*radius*np.pi/wt        #Fill at is 1/8th area
             img[np.any(img != np.flip(PCCode[0],0), axis=-1)]=[0,0,0]
             try:
                 gray_frame = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                sxgray_frame = cv2.cvtColor(sximg, cv2.COLOR_BGR2GRAY)
             except:
                 continue
-            kernel = cv2.getStructuringElement(cv2.MORPH_CROSS,(kvl,kvl))
-            thresh01 = cv2.dilate(gray_frame,kernel,iterations=dial)
+            if oldtp==0:
+                  kernel = cv2.getStructuringElement(cv2.MORPH_CROSS,(kvl,kvl))
+            if oldtp==1:
+                  kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(kvl,kvl))
+            if oldtp==2:
+                 kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(kvl,kvl))
+            thresh01 = np.uint8(cv2.erode(gray_frame, kernel,iterations=erode))
+            thresh01 = cv2.dilate(thresh01,kernel,iterations=dial)
             thresh12 = cv2.distanceTransform(thresh01,cv2.DIST_L2,3)
-            ret,thresh1 = cv2.threshold(thresh12,0,255,cv2.THRESH_BINARY)
-            thresh1 = np.uint8(cv2.erode(thresh1, kernel,iterations=erode))
-
-            circle_frame=cv2.cvtColor(thresh1,cv2.COLOR_GRAY2BGR)
+            ret,thresh1 = cv2.threshold(thresh12,oldthresh,255,cv2.THRESH_BINARY)
+            # The next is a dummy operation
+            thresh1 = np.uint8(cv2.erode(thresh1, kernel,iterations=1))
+ 
+            #circle_frame=cv2.cvtColor(thresh1,cv2.COLOR_GRAY2BGR)
+            circle_frame=cv2.cvtColor(sxgray_frame,cv2.COLOR_GRAY2BGR)
             try:
                 contours,h= cv2.findContours(thresh1,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
             except:
@@ -203,19 +251,28 @@ def get_radius_erode(image=None):
                     (x,y),_ = cv2.minEnclosingCircle(c)
                     center = (int(x),int(y))
                     cv2.circle(circle_frame, center, radius, (0, 255, 0), 3)
+            if k == ord('s') or lastk=='s':
+                for c in contours:
+                    if cv2.contourArea(c)>contr_min and cv2.contourArea(c)<4*wt*contr_min:
+                        (x,y),_ = cv2.minEnclosingCircle(c)
+                        center = (int(x),int(y))
+                        cv2.circle(sximg, center, 2, (255, 255, 255), 4)
+
+                    
             cv2.imshow('image',circle_frame)
     radss.append(radius)
     eros.append(erode)
     dials.append(dial)
     kvals.append(kvl)
     wvals.append(wt)
+    thresh.append(oldthresh)
     print("Your required Radius are",radss)
     print("Your required erosion count are",eros)
     print("Your required dilation count are",dials)
     print("Your required kernels are ",kvals)
     print("Your required weights are ",wvals)
     cv2.destroyAllWindows()
-    return(radss,eros,dials,kvals,wvals)
+    return(radss,eros,dials,kvals,wvals,thresh)
 
 
 def FullResolutionResidualUnit(pool_stream, res_stream, n_filters_3, n_filters_1, pool_scale):
@@ -852,6 +909,31 @@ def scale_write_img(filename="",pth="./",des="",src=""):
 
 #sys.path.append("models")
 #from models.FRRN import build_frrn
+def circle_mark(im_name = "",star_path='./png/StarFiles/'):
+    im = cv2.imread(im_name)
+    strfl='%s%s.star'%(star_path,''.join(im_name.split('.')[0:-1]).split('/')[-1])
+    print(strfl)
+    gt_df = pd.read_csv(strfl, skiprows=11, header=None,sep='\s+')
+
+    falcon_cord=gt_df[[0,1]]
+    falcon_tuples = [tuple(x) for x in falcon_cord.values]
+    for num in falcon_tuples:
+        cv2.circle(im,(int(num[0]),int((num[1]))),50,(0,255,0),7)
+    fl='./%s_star.png'%im_name.split('.')[0:-1][1]
+    print('Saving File: %s'%fl)
+    cv2.imwrite(fl, im)
+    return(im)
+
+def getlist(path='./png/StarFiles/selected/'):
+    from os import listdir
+    imlist = []
+    x = np.unique(([i for i in listdir(path)]))
+    for i in x:
+        fl=i.split('.')[0:-1][0]
+        if os.path.isfile("%s/%s.png" %(path,fl)):
+            imlist.append("%s/%s.png" %(path,fl))
+    return(imlist)
+
 
 def min_circle(cont):
     contours_poly = cv2.approxPolyDP(cont, 3, True)
@@ -1008,8 +1090,11 @@ def match_star_if_found(file=None,sfdes='mrc/',des='StarFiles/',Box=False):
     cv2.imwrite(file, im)
 
 
-def getstar(radius=[],erode=[],dial=[],kl=[],wt=[],image=None,des='StarFiles/',mrcsrc="./mrc/",fln='',CrossMatch=False,Box=False):
+def getstar(radius=[],erode=[],dial=[],kl=[],wt=[],th=[],image=None,simage=None,des='StarFiles/',mrcsrc="./mrc/",fln='',CrossMatch=False,Box=False):
         imgx=cv2.imread(image)
+        simgx=cv2.imread(simage)
+        simgx=gray_frame = cv2.cvtColor(simgx, cv2.COLOR_BGR2GRAY)
+        simgx=gray_frame = cv2.cvtColor(simgx, cv2.COLOR_GRAY2RGB)
         img=np.copy(imgx)
         PCCode=np.array([label_values[class_names_list=='Protein']])
         final_list=[]
@@ -1026,16 +1111,18 @@ def getstar(radius=[],erode=[],dial=[],kl=[],wt=[],image=None,des='StarFiles/',m
             dl=dial[i]
             kval=(kl[i],kl[i])
             wtv=wt[i]
+            tho=th[i]
             contr_min=rad*rad*np.pi/wtv                 # 2 means 0.25 % of the area
             #print(contr_min)
             img[np.any(img != np.flip(PCCode[0],0), axis=-1)]=[0,0,0]
             gray_frame = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             kernel = cv2.getStructuringElement(cv2.MORPH_CROSS,kval)
             thresh01 = cv2.dilate(gray_frame,kernel,iterations=dl)
+            thresh01 = np.uint8(cv2.erode(thresh01, kernel,iterations=er))
             thresh12 = cv2.distanceTransform(thresh01,cv2.DIST_L2,3)
-            ret,thresh1 = cv2.threshold(thresh12,0,255,cv2.THRESH_BINARY)
-            thresh1 = np.uint8(cv2.erode(thresh1, kernel,iterations=er))
-            circle_frame=cv2.cvtColor(thresh1,cv2.COLOR_GRAY2BGR)
+            ret,thresh1 = cv2.threshold(thresh12,tho,255,cv2.THRESH_BINARY)
+            thresh1 = np.uint8(cv2.erode(thresh1, kernel,iterations=1))
+            #circle_frame=cv2.cvtColor(thresh1,cv2.COLOR_GRAY2BGR)
             try:
                 contours, hierarchy = cv2.findContours(thresh1,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
             except:
@@ -1060,22 +1147,19 @@ def getstar(radius=[],erode=[],dial=[],kl=[],wt=[],image=None,des='StarFiles/',m
             for r,c in final_list:
                 for x,y in c:
                     center = (int(x),int(y))
-                    cv2.circle(imgx, center, r, (0, 255, 0), 3)
+                    cv2.circle(simgx, center, r, (0, 255, 0), 3)
         else:
-            for box in bx_array:
-                #print("boxcords=",box)
-                cv2.drawContours(imgx,[box] , 0, (255, 0, 255),3)
             for xx in np.array(b_full_list):
                 for x,y in xx[[0]]:
                     #print("box centre=",xx[0])
                     center = (int(x),int(y))
-                    cv2.circle(imgx,center, 2, (255, 0, 255),3)
+                    cv2.circle(simgx,center, 2, (255, 0, 255),3)
 
         try:
             os.mkdir('%s/selected/'%des)
         except:
             a=0
-        cv2.imwrite('%s/selected/%s'%(des,fln),imgx)
+        cv2.imwrite('%s/selected/%s'%(des,fln),simgx)
 
         #print(final_list)
         #final_list=[x for x in c_list if x is not None]
@@ -1730,7 +1814,71 @@ def get_label_info(csv_path):
             label_values.append([int(row[1]), int(row[2]), int(row[3])])
         # print(class_dict)
     return class_names, label_values
+
+def DrawPoly(image=None):
+    PolyA_array=[]
+    PolyR_array=[]
+    import cv2
+    img = cv2.imread(image)
+   
+    from time import time
+    boxes = []
+    print(' --------------------------------------')
+    print('|        Press "q" key to quit         |')
+    print('|     "a" key to append to selection   |')
+    print('|    "r" key to remove from selection  |')
+    print('|     +/- to zoom in and out image     |')
+    print(' --------------------------------------')
+    mulf=1
+    def on_mouse(event, x, y, flags, params):
+ 
+        if event == cv2.EVENT_LBUTTONDOWN:
+            #print('Start Mouse Position: '+str(x)+', '+str(y))
+            sbox = [x, y]
+            boxes.append(sbox)
+            # print count
+            # print sbox
+
+        elif event == cv2.EVENT_LBUTTONUP:
+            #print('End Mouse Position: '+str(x)+', '+str(y))
+            ebox = [x, y]
+            boxes.append(ebox)
+            #print(boxes)
+            crop = img[boxes[-2][1]:boxes[-1][1],boxes[-2][0]:boxes[-1][0]]
+            if ((crop.shape[0]!=0) and (crop.shape[1]!=0)):
+                cv2.imshow('crop',crop)
+                k =  cv2.waitKey(0)
+                if k== ord('a'):
+                    PolyA_array.append([boxes[-2][1],boxes[-1][1],boxes[-2][0],boxes[-1][0]])
+                if k== ord('r'):
+                    PolyR_array.append([boxes[-2][1],boxes[-1][1],boxes[-2][0],boxes[-1][0]])
+                cv2.destroyWindow('crop')
+ 
+            
+    while(1):
+ 
+        cv2.namedWindow('real image')
+        cv2.setMouseCallback('real image', on_mouse, 0)
+        cv2.imshow('real image', img)
+        kk=cv2.waitKey(0)
+        if  kk== ord('q'):
+                cv2.destroyAllWindows()
+                break
+        if kk == ord('+'):
+            img = cv2.resize(img, None, fx = 4,fy = 4)
+            mulf=mulf/4
+            cv2.destroyAllWindows()
+        if kk == ord('-'):
+            img = cv2.resize(img, None, fx = 0.25,fy = 0.25)
+            mulf=mulf*4
+            cv2.destroyAllWindows()
+    if PolyA_array==[]:
+        PolyA_array=[[0,img.shape[1],0,img.shape[0]]]
+    return(mulf,PolyA_array,PolyR_array)
+
 def LabelMRC(image=None,mrcsrc="./mrc/",labelpath='',TrData='TrData.txt',debug=False):
+     
+ 
     print("-------------------------------------------------------------------------")
     print('CASSPER Label Toolkit')
     print('USAGE:')
@@ -1749,6 +1897,7 @@ def LabelMRC(image=None,mrcsrc="./mrc/",labelpath='',TrData='TrData.txt',debug=F
     print('"v" - Full Image view')
     print('"+" - increase window size')
     print('"-" - decrease window size')
+    print('"q" - quit this image and move to the next')
     print('-------------------------------------------------------------------------')
     input("Press Enter to continue...")
     cutwidth=256
@@ -1921,7 +2070,19 @@ def LabelMRC(image=None,mrcsrc="./mrc/",labelpath='',TrData='TrData.txt',debug=F
                 cv2.imwrite("/tmp/%s"%fln,imy)
                 #imy=load_image('/tmp/%s'%fln)
                 match_star_if_found(file='/tmp/%s'%(fln),sfdes=mrcsrc+"/sf",Box=False)
+                mulf,Select_r,Reject_r=DrawPoly(image='/tmp/%s'%fln)
                 imx=load_image('/tmp/%s'%fln)
+                im=np.zeros_like(imx)
+                for m in Select_r:
+                    m=mulf*np.array(m)
+                    i,j,k,l = m
+                    print(i,j,k,l)
+                    im[i:j,k:l]=imx[i:j,k:l]
+                for m in Reject_r:
+                    m=mulf*np.array(m)
+                    i,j,k,l = m
+                    im[i:j,k:l]=0
+                imx=im.copy()
                 os.remove('/tmp/%s'%fln)
                 #imx=cv2.cvtColor(imxx,cv2.COLOR_BGR2GRAY)
                 if debug==True:
@@ -1934,8 +2095,8 @@ def LabelMRC(image=None,mrcsrc="./mrc/",labelpath='',TrData='TrData.txt',debug=F
                 oldx=sx//2
                 oldy=sy//2
                 show_canvas(img=img,fln=fln)
-                cv2.createTrackbar('maskwindow',fln,7,900,callback)
-                cv2.createTrackbar('minarea',fln,9,1000,callback)
+                cv2.createTrackbar('maskwindow',fln,30,900,callback)
+                cv2.createTrackbar('minarea',fln,140,1000,callback)
                 cv2.createTrackbar('maxarea',fln,1640,6000,callback)
                 while(1):
                     cv2.setMouseCallback(fln, click_and_crop)
@@ -2059,7 +2220,7 @@ def LabelMRC(image=None,mrcsrc="./mrc/",labelpath='',TrData='TrData.txt',debug=F
 
     cv2.destroyAllWindows()
 
-def PredictMRC(image=None,model_path='models/',model_name="CrossPro.ckpt",crop_height=512,crop_width=512,model="FRRN-B",dataset="./png/",mrcsrc="./mrc/",Savestar=True,CrossMatch=False,Box=True):
+def PredictMRC(image=None,Fresh=False,model_path='models/',model_name="CrossPro.ckpt",crop_height=512,crop_width=512,model="FRRN-B",dataset="./png/",mrcsrc="./mrc/",Savestar=True,CrossMatch=False,Box=True):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -2100,8 +2261,13 @@ def PredictMRC(image=None,model_path='models/',model_name="CrossPro.ckpt",crop_h
     print('Loading model weights')
     saver=tf.compat.v1.train.Saver(max_to_keep=1000)
     sess.run(tf.compat.v1.global_variables_initializer())
-    mymodel="%s%s"%(model_path,model_name)
-    saver.restore(sess,mymodel)
+    if Fresh:
+        saver.restore(sess,'models/BestFr_InceptionV4_model_FRRN-B.ckpt')
+        print('New model from your training is used for predictions')
+    else:
+        mymodel="%s%s"%(model_path,model_name)
+        saver.restore(sess,mymodel)
+        print('Predictions are made using the model: %s'%mymodel)
     print('loaded model..')
     des=dataset
     try:
@@ -2130,7 +2296,19 @@ def PredictMRC(image=None,model_path='models/',model_name="CrossPro.ckpt",crop_h
 
             print("Testing image " + fln)
 
-            loaded_image=load_image(dest+'/'+fln)
+            mulf,Select_r,Reject_r=DrawPoly(image=dest+'/'+fln)
+            imx=load_image(dest+'/'+fln)
+            im=np.zeros_like(imx)
+            for m in Select_r:
+                m=mulf*np.array(m)
+                i,j,k,l = m
+                im[i:j,k:l]=imx[i:j,k:l]
+            for m in Reject_r:
+                m=mulf*np.array(m)
+                i,j,k,l = m
+                im[i:j,k:l]=0
+            loaded_image=im.copy()
+
             resized_image=cv2.resize(loaded_image, (crop_width, crop_width))
             input_image=np.expand_dims(np.float32(resized_image[:crop_height, :crop_width]),axis=0)/  255.0
             #input_image=np.expand_dims(np.float32(load_image(val_input_names[ind])[:crop_height, :crop_width]),axis=0)/255.0
@@ -2158,8 +2336,8 @@ def PredictMRC(image=None,model_path='models/',model_name="CrossPro.ckpt",crop_h
                     global ed
                     global da
                     global kv
-                    rd,ed,da,kv,wt=get_radius_erode(image=des+'Predict_labels/'+'%s.png'%(file_name))
-                getstar(radius=rd,erode=ed,dial=da,kl=kv,wt=wt,image=des+'Predict_labels/'+'%s.png'%(file_name),des=des+'StarFiles/',mrcsrc=mrcsrc,fln=fln,CrossMatch=CrossMatch,Box=Box)
+                    rd,ed,da,kv,wt,th=get_radius_erode(image=des+'Predict_labels/'+'%s.png'%(file_name),shimg=dest+'/'+fln)
+                getstar(radius=rd,erode=ed,dial=da,kl=kv,wt=wt,th=th,image=des+'Predict_labels/'+'%s.png'%(file_name),simage=dest+'/'+fln,des=des+'StarFiles/',mrcsrc=mrcsrc,fln=fln,CrossMatch=CrossMatch,Box=Box)
 
     else:
         print("Testing image " + image)
@@ -2177,13 +2355,15 @@ def PredictMRC(image=None,model_path='models/',model_name="CrossPro.ckpt",crop_h
         file_name=filepath_to_name(image)
         cv2.imwrite("%s_pred.png"%(file_name),cv2.cvtColor(np.uint8(out_vis_image), cv2.COLOR_RGB2BGR))
         scale_write_img(filename="%s_fpred.png"%(file_name),src="%s_pred.png"%(file_name))
+        #im_dummy=circle_mark(file_name)
+
         if Savestar==True:
             try:
                 os.mkdir(des+'StarFiles/')
             except:
                 a=0
-            rd,ed,da,kv,wt=get_radius_erode(image=des+'Predict_labels/'+'%s.png'%(file_name))
-            getstar(radius=rd,erode=ed,dial=da,kl=kv,wt=wt,image=des+'Predict_labels/'+'%s.png'%(file_name),des=des+'StarFiles/',mrcsrc=mrcsrc,fln=des+'Predict_labels/'+image,CrossMatch=CrossMatch,Box=Box)
+            rd,ed,da,kv,wt,th=get_radius_erode(image=des+'Predict_labels/'+'%s.png'%(file_name),shimg=image)
+            getstar(radius=rd,erode=ed,dial=da,kl=kv,wt=wt,th=th,image=des+'Predict_labels/'+'%s.png'%(file_name),simage=dest+'/'+fln,des=des+'StarFiles/',mrcsrc=mrcsrc,fln=des+'Predict_labels/'+image,CrossMatch=CrossMatch,Box=Box)
 
     run_time=time.time()-st
 
@@ -2366,14 +2546,14 @@ def prepare_data(dataset_dir='.png/',Tfolder='./mrc/'):
 # Count total number of parameters in the model
 def count_params():
     total_parameters = 0
-    for variable in tf.compat.v1.trainable_variables():
+    '''for variable in tf.compat.v1.trainable_variables():
         shape = variable.get_shape()
         variable_parameters = 1
         for dim in shape:
             variable_parameters *= dim.value
         total_parameters += variable_parameters
     print("This model has %d trainable parameters"% (total_parameters))
-
+    '''
 # Randomly crop the image to a specific size. For data augmentation
 def random_crop(image, label, crop_height, crop_width):
     if (image.shape[0] != label.shape[0]) or (image.shape[1] != label.shape[1]):
@@ -2864,5 +3044,6 @@ def TrainMRC(num_epochs=300,epoch_start_i=0,checkpoint_step=5,validation_step=1,
     shutil.rmtree('models/checkpoints')
 if __name__=='__main__':
     checksetup()
+    #LabelMRC()
     #TrainMRC()
     PredictMRC()
