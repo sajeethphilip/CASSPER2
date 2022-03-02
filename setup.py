@@ -2,7 +2,7 @@ from distutils.core import setup
 from Cython.Build import cythonize
 
 setup(
-    ext_modules=cythonize("CASSPER_tf2.py"),
+    ext_modules=cythonize("CASSPER2.py"),
 )
 
 # Compile:
