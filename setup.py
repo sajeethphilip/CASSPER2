@@ -24,7 +24,7 @@ setuptools.setup(
 
     packages=setuptools.find_packages(include=['CASSPER2.py']),
     install_requires=[
-        'CASSPER2',
+        'CASSPER2.py',
         'argparse',
         'image-slicer',
         'imageio',
