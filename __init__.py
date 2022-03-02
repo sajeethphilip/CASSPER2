@@ -1,1 +1,1 @@
-CASSPER2.CASSPER2.py()
+import CASSPER2
