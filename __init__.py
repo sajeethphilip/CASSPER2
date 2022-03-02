@@ -1,1 +1,1 @@
-./CASSPER2.py()
+CASSPER2.CASSPER2.py()
