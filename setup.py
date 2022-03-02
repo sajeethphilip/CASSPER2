@@ -6,9 +6,9 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
 
-    name="sajeethphilip", # Replace with your username
+    name="CASSPER2", # Replace with your username
 
-    version="1.0.0",
+    version="2.3.1",
 
     author="Ninan Sajeeth Philip",
 
