@@ -22,7 +22,29 @@ setuptools.setup(
 
     url="https://github.com/sajeethphilip/CASSPER2",
 
-    packages=setuptools.find_packages(include=['CASSPER2*']),
+    packages=setuptools.find_packages(include=['CASSPER2.py']),
+    install_requires=[
+        'argparse',
+        'image-slicer',
+        'imageio',
+        'importlib-metadata',
+        'imutils',
+        'matplotlib',
+        'mrcfile',
+        'numpy',
+        'opencv-python',
+        'Pillow',
+        'ray',
+        'requests',
+        'scikit-image',
+        'scikit-learn',
+        'scipy',
+        'image_slicer',
+        'sklearn',
+        'tensorboard',
+        'tensorflow',
+        'tf_slim'
+        ],
 
     classifiers=[
 
