@@ -21,8 +21,15 @@ setuptools.setup(
     long_description_content_type="text/markdown",
 
     url="https://github.com/sajeethphilip/CASSPER2/",
+    
+    #packages=setuptools.find_packages(include=['CASSPER2.py','CASSPER2']),
+    # If your package is a single module, use this instead of 'packages':
+    py_modules=['CASSPER2'],
 
-    packages=setuptools.find_packages(include=['CASSPER2.py','CASSPER']),
+     entry_points={
+         'console_scripts': ['mycli=CASSPER2:cli'],
+     },
+
     install_requires=[
         'argparse',
         'image-slicer',
@@ -59,4 +66,4 @@ setuptools.setup(
     python_requires='>=3.6',
 
 )
- 
+
