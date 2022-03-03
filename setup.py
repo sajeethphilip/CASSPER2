@@ -53,7 +53,7 @@ setuptools.setup(
         'tf_slim',
          'pandas',
          'google-api-python-client',
-         'google-auth-httplib2'
+         'google-auth-httplib2',
          'google-auth-oauthlib'
         ],
 
