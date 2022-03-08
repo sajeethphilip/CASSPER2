@@ -31,6 +31,8 @@ setuptools.setup(
      },
 
     install_requires=[
+        'pip',
+        'wget',
         'argparse',
         'image-slicer',
         'imageio',
